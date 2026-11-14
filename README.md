@@ -57,6 +57,15 @@ port := envreq.Check(envreq.Requirement{
     Validate: envreq.Port,
 })
 
+// Optional with default, where a variable set to "" also takes the default
+listen := envreq.Check(envreq.Requirement{
+    Name:         "LISTEN_ADDR",
+    Source:       "server",
+    Optional:     true,
+    Default:      ":8080",
+    EmptyIsUnset: true,
+}).Value
+
 // Sensitive value (never printed in reports)
 apiKey := envreq.Check(envreq.Requirement{
     Name:        "API_KEY",
@@ -150,6 +159,10 @@ type Requirement struct {
     Default     string             // Default value if not set
     Validate    func(string) error // Optional validator function
     Sensitive   bool               // If true, value is never displayed
+    // EmptyIsUnset: a variable set to "" counts as unset, so Default applies and a
+    // required variable reports missing. Every reader of one name declares the same
+    // value, since the first Check of a name is cached for all later ones.
+    EmptyIsUnset bool
 }
 
 type Result struct {

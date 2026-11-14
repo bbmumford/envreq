@@ -34,6 +34,12 @@ type Requirement struct {
 	Default     string             // Optional default if missing
 	Validate    func(string) error // Optional value validator
 	Sensitive   bool               // If true, never show value, redact in reports
+	// EmptyIsUnset makes a variable that is set to the empty string count as unset:
+	// Default applies, and a required variable reports missing. Without it an empty
+	// value is a present value. The first Check of a name reads the environment and
+	// every later Check of that name returns the same cached Result, so all readers
+	// of one name declare the same EmptyIsUnset.
+	EmptyIsUnset bool
 }
 
 // Result contains the loaded and validated environment variable.
@@ -111,6 +117,9 @@ func Check(r Requirement) Result {
 		if existing.Sensitive || r.Sensitive {
 			merged.Sensitive = true
 		}
+		if existing.EmptyIsUnset || r.EmptyIsUnset {
+			merged.EmptyIsUnset = true
+		}
 		reg[r.Name] = merged
 		r = merged
 	} else {
@@ -128,6 +137,9 @@ func Check(r Requirement) Result {
 
 	// Load & validate, cache the Result
 	val, ok := os.LookupEnv(r.Name)
+	if ok && val == "" && r.EmptyIsUnset {
+		ok = false
+	}
 	if !ok && r.Default != "" {
 		val, ok = r.Default, true
 	}

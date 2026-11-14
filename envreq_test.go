@@ -97,6 +97,46 @@ func TestValue(t *testing.T) {
 	}
 }
 
+func TestEmptyIsUnset(t *testing.T) {
+	envreq.Reset()
+	t.Setenv("TEST_EMPTY_DEFAULTED", "")
+	t.Setenv("TEST_EMPTY_KEPT", "")
+	t.Setenv("TEST_EMPTY_REQUIRED", "")
+	t.Setenv("TEST_EMPTY_SET", "given")
+
+	defaulted := envreq.Check(envreq.Requirement{
+		Name: "TEST_EMPTY_DEFAULTED", Source: "test", Optional: true, Default: "fallback", EmptyIsUnset: true,
+	})
+	if !defaulted.Present || defaulted.Value != "fallback" {
+		t.Errorf("empty value with EmptyIsUnset: got present=%v value=%q, want the default", defaulted.Present, defaulted.Value)
+	}
+
+	kept := envreq.Check(envreq.Requirement{
+		Name: "TEST_EMPTY_KEPT", Source: "test", Optional: true, Default: "fallback",
+	})
+	if !kept.Present || kept.Value != "" {
+		t.Errorf("empty value without EmptyIsUnset: got present=%v value=%q, want a present empty value", kept.Present, kept.Value)
+	}
+
+	required := envreq.Check(envreq.Requirement{
+		Name: "TEST_EMPTY_REQUIRED", Source: "test", EmptyIsUnset: true,
+	})
+	if required.Present {
+		t.Error("empty required value with EmptyIsUnset: want missing")
+	}
+	var buf bytes.Buffer
+	if missing := envreq.Report(&buf, []envreq.Result{required}); missing != 1 {
+		t.Errorf("Report counted %d missing, want 1", missing)
+	}
+
+	set := envreq.Check(envreq.Requirement{
+		Name: "TEST_EMPTY_SET", Source: "test", Optional: true, Default: "fallback", EmptyIsUnset: true,
+	})
+	if set.Value != "given" {
+		t.Errorf("set value with EmptyIsUnset: got %q, want %q", set.Value, "given")
+	}
+}
+
 func TestValidators(t *testing.T) {
 	tests := []struct {
 		name      string
