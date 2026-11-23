@@ -1,6 +1,6 @@
 # envreq
 
-A Go package for centralized environment variable management with validation, freeze lifecycle, and sensitive value protection.
+envreq is a Go package for centralized environment variable management with validation, freeze lifecycle, and sensitive value protection.
 
 ## Overview
 
@@ -146,6 +146,10 @@ envreq.Check(envreq.Requirement{Name: "APP_NAME", Source: "app"})
 name, ok := envreq.Value("APP_NAME")
 ```
 
+A later `Check` of the same name merges its requirement into the registry
+(required wins over optional, and sensitive wins) but returns the `Result` the
+first `Check` cached.
+
 ## API Reference
 
 ### Types
@@ -228,6 +232,37 @@ func TestMyFunction(t *testing.T) {
 }
 ```
 
-## License
+## Dependencies
 
-MIT
+None: envreq uses only the standard library.
+
+## Used by
+
+Importers in the ORBTR estate:
+
+- `github.com/ORBTR/Library/endpoint`, `component/keyprotect`,
+  `keyvault/kvboot` and `keyvault/kvenv`.
+- `github.com/ORBTR/cortex`: credential, artifact custody, observability,
+  provider wiring and platform-auth packages.
+- Every AI endpoint (`api`, `app`, `cloud`, `compute`, `fleet`, `manage`,
+  `node` and `runtime.orbtr.ai`) and the xyz endpoints (`api`, `ftp`, `mail`,
+  `node` and `get.orbtr.xyz`).
+- The IO endpoints `app` (`signaling`), `get`, `help`, `node`, `orbtr` and
+  `relay.orbtr.io`.
+- `github.com/bbmumford/cfgload` and `github.com/bbmumford/flyio`.
+
+## Platforms and build
+
+Pure Go, no cgo and no build tags. The module's `go` directive is 1.23.2.
+
+## Licence
+
+MIT. Copyright (c) 2026 Brandon Miller-Mumford. The full text is in
+[LICENSE](LICENSE).
+
+## Contributing
+
+[AGENTS.md](AGENTS.md) holds the repository's two rules, for people and coding
+agents alike: no temporary documents in the repository, and conventional commit
+messages that stand on their own. [CLAUDE.md](CLAUDE.md) imports it for Claude
+Code.
