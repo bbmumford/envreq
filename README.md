@@ -147,8 +147,9 @@ name, ok := envreq.Value("APP_NAME")
 ```
 
 A later `Check` of the same name merges its requirement into the registry
-(required wins over optional, and sensitive wins) but returns the `Result` the
-first `Check` cached.
+(required wins over optional, sensitive wins, and a validator or default added
+later joins it), and every `Check` judges the environment value, read once per
+name, against the merged requirement.
 
 ## API Reference
 
