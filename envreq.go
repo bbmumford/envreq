@@ -36,9 +36,8 @@ type Requirement struct {
 	Sensitive   bool               // If true, never show value, redact in reports
 	// EmptyIsUnset makes a variable that is set to the empty string count as unset:
 	// Default applies, and a required variable reports missing. Without it an empty
-	// value is a present value. The first Check of a name reads the environment and
-	// every later Check of that name returns the same cached Result, so all readers
-	// of one name declare the same EmptyIsUnset.
+	// value is a present value. Like Optional and Sensitive, it holds for a name
+	// once any declaration of the name sets it.
 	EmptyIsUnset bool
 }
 
@@ -54,11 +53,29 @@ var (
 	mu     sync.RWMutex
 	reg    = map[string]Requirement{}
 	cache  = map[string]Result{}
+	reads  = map[string]envRead{}
+	gens   = map[string]uint64{}
 	frozen atomic.Bool
 )
 
+// envRead is a variable's environment value as first read: the process reads
+// each name once, so every declaration of it judges the same value.
+type envRead struct {
+	value string
+	set   bool
+}
+
 // Check declares (or references) a requirement, reads & validates immediately,
 // caches the value, and returns a Result you can use inline like os.Getenv.
+//
+// Every declaration of a name merges into one requirement, the strictest of
+// them (required wins over optional; Sensitive and EmptyIsUnset win once set;
+// the first Description, Source, Validate and Default given are kept), and the
+// Result is judged against that merged requirement on every Check, so a later,
+// stricter declaration is enforced: a variable first declared optional and
+// then required reports missing, one later declared Sensitive is redacted,
+// and a validator added later runs. The environment itself is read once per
+// name.
 func Check(r Requirement) Result {
 	if frozen.Load() {
 		// Check if this is a new registration after freeze
@@ -125,18 +142,34 @@ func Check(r Requirement) Result {
 	} else {
 		reg[r.Name] = r
 	}
+	gens[r.Name]++
+	read, readBefore := reads[r.Name]
+	if !readBefore {
+		read.value, read.set = os.LookupEnv(r.Name)
+		reads[r.Name] = read
+	}
+	gen := gens[r.Name]
 	mu.Unlock()
 
-	// Check if already cached
-	mu.RLock()
-	if cached, ok := cache[r.Name]; ok {
-		mu.RUnlock()
-		return cached
+	// The Result is judged outside the lock, so a validator may itself call
+	// Check; it is stored only if no other declaration merged in meanwhile,
+	// else it is judged again against the newer merge.
+	for {
+		res := judge(r, read)
+		mu.Lock()
+		if gens[r.Name] == gen {
+			cache[r.Name] = res
+			mu.Unlock()
+			return res
+		}
+		r, gen = reg[r.Name], gens[r.Name]
+		mu.Unlock()
 	}
-	mu.RUnlock()
+}
 
-	// Load & validate, cache the Result
-	val, ok := os.LookupEnv(r.Name)
+// judge loads and validates one requirement against its environment read.
+func judge(r Requirement, read envRead) Result {
+	val, ok := read.value, read.set
 	if ok && val == "" && r.EmptyIsUnset {
 		ok = false
 	}
@@ -149,18 +182,12 @@ func Check(r Requirement) Result {
 		verr = r.Validate(val)
 	}
 
-	res := Result{
+	return Result{
 		Requirement: r,
 		Present:     ok,
 		Value:       val,
 		Err:         verr,
 	}
-
-	mu.Lock()
-	cache[r.Name] = res
-	mu.Unlock()
-
-	return res
 }
 
 // Value fetches a cached value by name. Returns empty string and false if not found.
@@ -293,5 +320,7 @@ func Reset() {
 
 	reg = map[string]Requirement{}
 	cache = map[string]Result{}
+	reads = map[string]envRead{}
+	gens = map[string]uint64{}
 	frozen.Store(false)
 }
