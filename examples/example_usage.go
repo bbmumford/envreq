@@ -14,29 +14,23 @@ import (
 	"github.com/bbmumford/envreq"
 )
 
-// Before: Using os.Getenv directly
-func oldWay() {
-	apiKey := os.Getenv("STRIPE_API_KEY")
-	if apiKey == "" {
-		log.Fatal("STRIPE_API_KEY is required")
-	}
-
-	timeout := os.Getenv("AUTH_TIMEOUT")
-	if timeout == "" {
-		timeout = "30s"
-	}
-
-	baseURL := os.Getenv("AUTH_SERVICE_URL")
-	if baseURL == "" {
-		log.Fatal("AUTH_SERVICE_URL is required")
-	}
-
-	// Use variables...
-	_ = apiKey
-	_ = timeout
-	_ = baseURL
-}
-
+// Before: using os.Getenv directly, each check written by hand.
+//
+//	apiKey := os.Getenv("STRIPE_API_KEY")
+//	if apiKey == "" {
+//		log.Fatal("STRIPE_API_KEY is required")
+//	}
+//
+//	timeout := os.Getenv("AUTH_TIMEOUT")
+//	if timeout == "" {
+//		timeout = "30s"
+//	}
+//
+//	baseURL := os.Getenv("AUTH_SERVICE_URL")
+//	if baseURL == "" {
+//		log.Fatal("AUTH_SERVICE_URL is required")
+//	}
+//
 // After: Using envreq.Check (drop-in replacement)
 func newWay() {
 	// Drop-in replacement for os.Getenv with automatic registration
