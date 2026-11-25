@@ -237,10 +237,14 @@ func CheckAll() []Result {
 func Report(w io.Writer, results []Result) (missing int) {
 	showValues := os.Getenv("ENVREQ_SHOW_VALUES") == "1"
 
-	fmt.Fprintf(w, "%-20s %-12s %-8s %-9s %-8s %s\n",
-		"ENV", "SOURCE", "REQUIRED", "SENSITIVE", "STATUS", "DETAILS")
-	fmt.Fprintf(w, "%-20s %-12s %-8s %-9s %-8s %s\n",
-		strings.Repeat("-", 20),
+	// row writes one line of the table. The count Report returns is what its
+	// callers act on (MustValidate exits on it), and a line that fails to write
+	// leaves that count as it is, so each write's error is dropped.
+	row := func(cols ...any) {
+		_, _ = fmt.Fprintf(w, "%-20s %-12s %-8s %-9s %-8s %s\n", cols...)
+	}
+	row("ENV", "SOURCE", "REQUIRED", "SENSITIVE", "STATUS", "DETAILS")
+	row(strings.Repeat("-", 20),
 		strings.Repeat("-", 12),
 		strings.Repeat("-", 8),
 		strings.Repeat("-", 9),
@@ -286,8 +290,7 @@ func Report(w io.Writer, results []Result) (missing int) {
 			}
 		}
 
-		fmt.Fprintf(w, "%-20s %-12s %-8s %-9s %-8s %s\n",
-			res.Name, res.Source, required, sensitive, status, details)
+		row(res.Name, res.Source, required, sensitive, status, details)
 	}
 
 	return missing

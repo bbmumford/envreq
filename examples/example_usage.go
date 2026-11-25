@@ -143,7 +143,9 @@ func init() {
 // Testing example
 func ExampleTesting() {
 	// In tests, use t.Setenv and call MustValidate in test setup
-	os.Setenv("TEST_VAR", "test-value")
+	if err := os.Setenv("TEST_VAR", "test-value"); err != nil {
+		log.Fatal(err)
+	}
 
 	// Reset registry for clean test
 	envreq.Reset()

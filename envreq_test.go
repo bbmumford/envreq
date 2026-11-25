@@ -242,8 +242,14 @@ func TestReport(t *testing.T) {
 	}
 
 	// Test debug mode
-	os.Setenv("ENVREQ_SHOW_VALUES", "1")
-	defer os.Unsetenv("ENVREQ_SHOW_VALUES")
+	if err := os.Setenv("ENVREQ_SHOW_VALUES", "1"); err != nil {
+		t.Fatalf("os.Setenv: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("ENVREQ_SHOW_VALUES"); err != nil {
+			t.Errorf("os.Unsetenv: %v", err)
+		}
+	}()
 
 	var debugBuf bytes.Buffer
 	envreq.Report(&debugBuf, results)

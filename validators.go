@@ -97,10 +97,10 @@ func Base64(v string) error {
 
 	// Basic base64 character validation
 	for _, r := range v {
-		if !((r >= 'A' && r <= 'Z') ||
-			(r >= 'a' && r <= 'z') ||
-			(r >= '0' && r <= '9') ||
-			r == '+' || r == '/' || r == '=') {
+		if (r < 'A' || r > 'Z') &&
+			(r < 'a' || r > 'z') &&
+			(r < '0' || r > '9') &&
+			r != '+' && r != '/' && r != '=' {
 			return fmt.Errorf("invalid base64 character")
 		}
 	}
